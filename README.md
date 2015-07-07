@@ -1,13 +1,10 @@
-Infusion Documentation
-======================
+Documentation Base
+==================
 
-## Browse the Infusion Documentation on GitHub
-
-
-You can [browse the Infusion Documentation directly on GitHub](src/documents).
+This project contains shared files and components used for documentation style
+websites.
 
 ## Build with DocPad
-
 
 Install DocPad:
 

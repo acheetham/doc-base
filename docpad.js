@@ -17,7 +17,8 @@ var docsVersion = "development";
 
 // The documentation root on GitHub:
 // Used to build URLs for "Edit on GitHub" links
-var githubDocRoot = "https://github.com/fluid-project/infusion-docs/blob/master/src/documents/";
+// var githubDocRoot = "https://github.com/fluid-project/doc-base/blob/master/src/documents/"
+var githubDocRoot = "";
 
 // Helper function to rewrite *.md links to *.html:
 // With this helper, we can write links to *.md files in our source files but
@@ -83,31 +84,39 @@ module.exports = {
             aliases: {
                 stylus: "css"
             }
+        },
+        stylus: {
+            stylusLibraries: {
+                nib: true
+            },
+            stylusOptions: {
+                compress: true,
+                'include css': true
+            }
+        },
+        uglify: {
+            //  Disable UglifyJS on the development environment.
+            environments: {
+                development: {
+                    enabled: false
+                }
+            },
+
+            //  Pass false to skip compressing entirely. Pass an object to specify custom
+            //  compressor options: http://lisperator.net/uglifyjs/compress .
+            compress: {},
+
+            //  Pass false to skip mangling names.
+            mangle: {}
         }
     },
-    events: {
-        generateBefore: function () {
-            // Empty the "out" directory before generation to ensure
-            // that we don't get multiple nested
-            // infusion/<version>/... copies
-            fs.emptyDirSync("out");
-        },
-        writeAfter: function () {
-            // Copy the images
-            fs.copySync(imagesSrcDir, imagesDestDir);
 
-            // Move the contents of the out directory to
-            // out/infusion/<version>. We need to do this to prepare the
-            // structure for the ghpages plugin as it does not support
-            // deploying to a location other than the root.
-            fs.removeSync("tmp-out");
-            fs.renameSync("out", "tmp-out");
-            fs.mkdirsSync("out/infusion");
-            fs.renameSync("tmp-out", "out/infusion/" + docsVersion);
-
-            // Copy the files for GitHub Pages:
-            // redirect index.htmls and CNAME
-            fs.copySync(path.join(rootPath, "src", "ghpages-files"), "out");
+    environments: {
+        development: {
+            stylusOptions: {
+                // Disable compression on the development environment
+                compress: false
+            }
         }
     }
 };
