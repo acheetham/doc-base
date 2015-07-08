@@ -1,7 +1,10 @@
 {
   "name": "doc-base",
-  "description": "Documentation Base",
-  "version": "0.0.1-SNAPSHOT"
+  "description": "A docpad template for creating documentation websites.",
+  "version": "0.0.1-SNAPSHOT",
+  "author": "Fluid Project",
+  "bugs": "http://issues.fluidproject.org/browse/FLUID",
+  "homepage": "http://www.fluidproject.org/",
   "dependencies": {
     "URIjs": "^1.14.1",
     "docpad": "~6.69.1",
@@ -11,5 +14,22 @@
     "docpad-plugin-marked": "~2.2.1",
     "docpad-plugin-stylus": "~2.9.0",
     "fs-extra": "^0.18.0"
-  }
+  },
+  "licenses": [
+    {
+      "type": "BSD-3-Clause",
+      "url": "http://www.opensource.org/licenses/BSD-3-Clause"
+    },
+    {
+      "type": "ECL-2.0",
+      "url": "http://www.opensource.org/licenses/ECL-2.0"
+    }
+  ],
+  "keywords": [
+    "fluid",
+    "documentation",
+    "docpad",
+    "static site",
+    "responsive"
+  ]
 }
