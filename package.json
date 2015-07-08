@@ -1,6 +1,7 @@
 {
   "name": "doc-base",
   "description": "Documentation Base",
+  "version": "0.0.1-SNAPSHOT"
   "dependencies": {
     "URIjs": "^1.14.1",
     "docpad": "~6.69.1",
