@@ -1,4 +1,4 @@
-/*! infusion - v2.0.0-SNAPSHOT Wednesday, June 24th, 2015, 9:30:39 AM*/
+/*! infusion - v2.0.0-SNAPSHOT Wednesday, July 15th, 2015, 2:10:08 PM*/
 /*!
  * jQuery JavaScript Library v1.11.0
  * http://jquery.com/
@@ -31349,7 +31349,7 @@ var fluid_2_0 = fluid_2_0 || {};
 
 })(jQuery, fluid_2_0);
 ;/*
-Copyright 2011 OCAD University
+Copyright 2011-2015 OCAD University
 Copyright 2011 Lucendo Development Ltd.
 
 Licensed under the Educational Community License (ECL), Version 2.0 or the New
@@ -31394,8 +31394,18 @@ var fluid_2_0 = fluid_2_0 || {};
         return anchorInfo;
     };
 
-    fluid.tableOfContents.refreshView = function (that) {
+    fluid.tableOfContents.locateHeadings = function (that) {
         var headings = that.locate("headings");
+
+        fluid.each(that.options.ignoreForToC, function (sel) {
+            headings = headings.not(sel).not(sel + " :header");
+        });
+
+        return headings;
+    };
+
+    fluid.tableOfContents.refreshView = function (that) {
+        var headings = that.locateHeadings();
 
         // remove existing toc anchors from the the DOM, before adding any new ones.
         that.locate("tocAnchors").remove();
@@ -31444,6 +31454,10 @@ var fluid_2_0 = fluid_2_0 || {};
             },
             insertAnchor: "fluid.tableOfContents.insertAnchor",
             generateGUID: "fluid.allocateSimpleId",
+            locateHeadings: {
+                funcName: "fluid.tableOfContents.locateHeadings",
+                args: ["{that}"]
+            },
             refreshView: {
                 funcName: "fluid.tableOfContents.refreshView",
                 args: ["{that}"]
@@ -31462,9 +31476,12 @@ var fluid_2_0 = fluid_2_0 || {};
             tocHeader: "Table of Contents"
         },
         selectors: {
-            headings: ":header:visible:not(.flc-toc-tocContainer :header)",
+            headings: ":header:visible",
             tocContainer: ".flc-toc-tocContainer",
             tocAnchors: ".flc-toc-anchors"
+        },
+        ignoreForToC: {
+            tocContainer: "{that}.options.selectors.tocContainer"
         },
         anchorClass: "flc-toc-anchors",
         events: {
@@ -32666,11 +32683,11 @@ var fluid_2_0 = fluid_2_0 || {};
             removeSource: true,
             target: "{that > messageLoader}.options"
         }, {
-            source: "{that}.options.templatePrefix",
-            target: "{that > templateLoader > resourcePath}.options.value"
+            source: "{that}.options.terms",
+            target: "{that > templateLoader}.options.terms"
         }, {
-            source: "{that}.options.messagePrefix",
-            target: "{that > messageLoader > resourcePath}.options.value"
+            source: "{that}.options.terms",
+            target: "{that > messageLoader}.options.terms"
         }, {
             source: "{that}.options.prefsEditor",
             removeSource: true,
@@ -32721,6 +32738,14 @@ var fluid_2_0 = fluid_2_0 || {};
      * Preferences Editor Resource Loader *
      **************************************/
 
+    /**
+     * A configurable component to allow users to set either the location of their own templates
+     * or the templates that are relative to the path defined in the Preferences Editor template
+     * path component.
+     *
+     * @param {Object} options
+     */
+
     fluid.defaults("fluid.prefs.resourceLoader", {
         gradeNames: ["fluid.eventedComponent", "autoInit"],
         listeners: {
@@ -32731,18 +32756,14 @@ var fluid_2_0 = fluid_2_0 || {};
         },
         defaultLocale: null,
         locale: null,
-        resources: {},
+        terms: {},  // Must be supplied by integrators
+        resources: {},  // Must be supplied by integrators
         resourceOptions: {},
         // Unsupported, non-API option
-        components: {
-            resourcePath: {
-                type: "fluid.prefs.resourcePath"
-            }
-        },
         invokers: {
             transformURL: {
                 funcName: "fluid.stringTemplate",
-                args: [ "{arguments}.0", {"prefix/" : "{that}.resourcePath.options.value"} ]
+                args: ["{arguments}.0", "{that}.options.terms"]
             },
             resolveResources: {
                 funcName: "fluid.prefs.resourceLoader.resolveResources",
@@ -32769,21 +32790,6 @@ var fluid_2_0 = fluid_2_0 || {};
             that.events.onResourcesLoaded.fire(resources);
         });
     };
-
-    /**********************************************
-     * Preferences Editor Template Path Specifier *
-     **********************************************/
-
-    /**
-     * A configurable component that defines the relative path from the html to Preferences Editor templates.
-     *
-     * @param {Object} options
-     */
-
-    fluid.defaults("fluid.prefs.resourcePath", {
-        gradeNames: ["fluid.littleComponent", "autoInit"],
-        value: "../html/"
-    });
 
     /**********************
      * Preferences Editor *
@@ -33930,7 +33936,9 @@ var fluid_2_0 = fluid_2_0 || {};
             theme: ["default", "bw", "wb", "by", "yb", "lgdg"]
         },
         markup: {
-            label: "<span class=\"fl-preview-A\">A</span><span class=\"fl-hidden-accessible\">%theme</span><div class=\"fl-crossout\"></div>"
+            // Aria-hidden needed on fl-preview-A and Display 'a' created as pseudo-content in css to prevent AT from reading out display 'a' on IE, Chrome, and Safari
+            // Aria-hidden needed on fl-crossout to prevent AT from trying to read crossout symbol in Safari
+            label: "<span class=\"fl-preview-A\" aria-hidden=\"true\"></span><span class=\"fl-hidden-accessible\">%theme</span><div class=\"fl-crossout\" aria-hidden=\"true\"></div>"
         },
         invokers: {
             style: {
@@ -33952,9 +33960,14 @@ var fluid_2_0 = fluid_2_0 || {};
     fluid.prefs.panel.contrast.style = function (labels, strings, markup, theme, defaultThemeName, style, defaultLabelStyle) {
         fluid.each(labels, function (label, index) {
             label = $(label);
+
+            var themeValue = strings[index];
             label.html(fluid.stringTemplate(markup, {
-                theme: strings[index]
+                theme: themeValue
             }));
+
+            // Aria-label set to prevent Firefox from reading out the display 'a'
+            label.attr("aria-label", themeValue);
 
             var labelTheme = theme[index];
             if (labelTheme === defaultThemeName) {
@@ -34528,6 +34541,10 @@ var fluid_2_0 = fluid_2_0 || {};
                 listener: "{that}.applyToc",
                 args: ["{change}.value"]
             }
+        },
+        distributeOptions: {
+            source: "{that}.options.ignoreForToC",
+            target: "{that tableOfContents}.options.ignoreForToC"
         }
     });
 
@@ -34990,35 +35007,35 @@ var fluid_2_0 = fluid_2_0 || {};
     fluid.defaults("fluid.prefs.starterTemplateLoader", {
         gradeNames: ["fluid.prefs.resourceLoader", "autoInit"],
         resources: {
-            textSize: "%prefix/PrefsEditorTemplate-textSize.html",
-            textFont: "%prefix/PrefsEditorTemplate-textFont.html",
-            lineSpace: "%prefix/PrefsEditorTemplate-lineSpace.html",
-            contrast: "%prefix/PrefsEditorTemplate-contrast.html",
-            layoutControls: "%prefix/PrefsEditorTemplate-layout.html",
-            linksControls: "%prefix/PrefsEditorTemplate-linksControls.html",
-            emphasizeLinks: "%prefix/PrefsEditorTemplate-emphasizeLinks.html",
-            inputsLarger: "%prefix/PrefsEditorTemplate-inputsLarger.html"
+            textSize: "%templatePrefix/PrefsEditorTemplate-textSize.html",
+            textFont: "%templatePrefix/PrefsEditorTemplate-textFont.html",
+            lineSpace: "%templatePrefix/PrefsEditorTemplate-lineSpace.html",
+            contrast: "%templatePrefix/PrefsEditorTemplate-contrast.html",
+            layoutControls: "%templatePrefix/PrefsEditorTemplate-layout.html",
+            linksControls: "%templatePrefix/PrefsEditorTemplate-linksControls.html",
+            emphasizeLinks: "%templatePrefix/PrefsEditorTemplate-emphasizeLinks.html",
+            inputsLarger: "%templatePrefix/PrefsEditorTemplate-inputsLarger.html"
         }
     });
 
     fluid.defaults("fluid.prefs.starterSeparatedPanelTemplateLoader", {
         gradeNames: ["fluid.prefs.starterTemplateLoader", "autoInit"],
         resources: {
-            prefsEditor: "%prefix/SeparatedPanelPrefsEditor.html"
+            prefsEditor: "%templatePrefix/SeparatedPanelPrefsEditor.html"
         }
     });
 
     fluid.defaults("fluid.prefs.starterFullPreviewTemplateLoader", {
         gradeNames: ["fluid.prefs.starterTemplateLoader", "autoInit"],
         resources: {
-            prefsEditor: "%prefix/FullPreviewPrefsEditor.html"
+            prefsEditor: "%templatePrefix/FullPreviewPrefsEditor.html"
         }
     });
 
     fluid.defaults("fluid.prefs.starterFullNoPreviewTemplateLoader", {
         gradeNames: ["fluid.prefs.starterTemplateLoader", "autoInit"],
         resources: {
-            prefsEditor: "%prefix/FullNoPreviewPrefsEditor.html"
+            prefsEditor: "%templatePrefix/FullNoPreviewPrefsEditor.html"
         }
     });
 
@@ -35035,15 +35052,15 @@ var fluid_2_0 = fluid_2_0 || {};
     fluid.defaults("fluid.prefs.starterMessageLoader", {
         gradeNames: ["fluid.prefs.resourceLoader", "autoInit"],
         resources: {
-            prefsEditor: "%prefix/prefsEditor.json",
-            textSize: "%prefix/textSize.json",
-            textFont: "%prefix/textFont.json",
-            lineSpace: "%prefix/lineSpace.json",
-            contrast: "%prefix/contrast.json",
-            layoutControls: "%prefix/tableOfContents.json",
-            linksControls: "%prefix/linksControls.json",
-            emphasizeLinks: "%prefix/emphasizeLinks.json",
-            inputsLarger: "%prefix/inputsLarger.json"
+            prefsEditor: "%messagePrefix/prefsEditor.json",
+            textSize: "%messagePrefix/textSize.json",
+            textFont: "%messagePrefix/textFont.json",
+            lineSpace: "%messagePrefix/lineSpace.json",
+            contrast: "%messagePrefix/contrast.json",
+            layoutControls: "%messagePrefix/tableOfContents.json",
+            linksControls: "%messagePrefix/linksControls.json",
+            emphasizeLinks: "%messagePrefix/emphasizeLinks.json",
+            inputsLarger: "%messagePrefix/inputsLarger.json"
         }
     });
 
@@ -35221,8 +35238,8 @@ var fluid_2_0 = fluid_2_0 || {};
             removeSource: true,
             target: "{that iframeEnhancer}.options"
         }, {
-            source: "{that}.options.templatePrefix",
-            target: "{that > iframeRenderer}.options.templatePrefix"
+            source: "{that}.options.terms",
+            target: "{that > iframeRenderer}.options.terms"
         }]
     });
 
@@ -35241,7 +35258,9 @@ var fluid_2_0 = fluid_2_0 || {};
         styles: {
             container: "fl-prefsEditor-separatedPanel-iframe"
         },
-        templatePrefix: "./",
+        terms: {
+            templatePrefix: "."
+        },
         markupProps: {
             "class": "flc-iframe",
             src: "%templatePrefix/prefsEditorIframe.html"
@@ -35251,7 +35270,7 @@ var fluid_2_0 = fluid_2_0 || {};
     fluid.prefs.separatedPanel.renderIframe.finalInit = function (that) {
         var styles = that.options.styles;
         // TODO: get earlier access to templateLoader,
-        that.options.markupProps.src = fluid.stringTemplate(that.options.markupProps.src, {"templatePrefix/": that.options.templatePrefix});
+        that.options.markupProps.src = fluid.stringTemplate(that.options.markupProps.src, that.options.terms);
         that.iframeSrc = that.options.markupProps.src;
 
         // Create iframe and append to container
@@ -35778,14 +35797,6 @@ var fluid_2_0 = fluid_2_0 || {};
         return auxSchema;
     };
 
-    fluid.prefs.expandSchemaDirectOption = function (auxSchema, type, targetPath) {
-        var value = auxSchema[type];
-        if (value) {
-            delete auxSchema[type];
-            fluid.set(auxSchema, targetPath, value);
-        }
-    };
-
     /**
      * Expands a all "@" path references from an auxiliary schema.
      * Note that you cannot chain "@" paths.
@@ -35938,9 +35949,20 @@ var fluid_2_0 = fluid_2_0 || {};
         return auxSchema;
     };
 
+    // Processes the auxiliary schema to output an object that contains all grade component definitions
+    // required for building the preferences editor, uiEnhancer and the settings store. These grade components
+    // are: panels, enactors, initialModel, messageLoader, templateLoader and terms.
+    // These grades are consumed and integrated by builder.js
+    // (https://github.com/fluid-project/infusion/blob/master/src/framework/preferences/js/Builder.js)
     fluid.prefs.expandSchema = function (schemaToExpand, indexes, topCommonOptions, elementCommonOptions, mappedDefaults) {
         var auxSchema = fluid.prefs.expandSchemaImpl(schemaToExpand);
         auxSchema.namespace = auxSchema.namespace || "fluid.prefs.created_" + fluid.allocateGuid();
+
+        var terms = fluid.get(auxSchema, "terms");
+        if (terms) {
+            delete auxSchema.terms;
+            fluid.set(auxSchema, ["terms", "terms"], terms);
+        }
 
         var compositePanelList = fluid.get(auxSchema, "groups");
         if (compositePanelList) {
@@ -35958,33 +35980,20 @@ var fluid_2_0 = fluid_2_0 || {};
                 fluid.prefs.expandSchemaComponents(auxSchema, "panels", category.type, category[type], fluid.get(indexes, type),
                     fluid.get(elementCommonOptions, type), fluid.get(elementCommonOptions, type + "Model"), mappedDefaults);
             }
+
             type = "enactor";
             if (category[type]) {
                 fluid.prefs.expandSchemaComponents(auxSchema, "enactors", category.type, category[type], fluid.get(indexes, type),
                     fluid.get(elementCommonOptions, type), fluid.get(elementCommonOptions, type + "Model"), mappedDefaults);
             }
 
-            type = "template";
-            if (prefName === type) {
-                fluid.set(auxSchema, ["templateLoader", "resources", "prefsEditor"], auxSchema[type]);
-                delete auxSchema[type];
-            }
+            fluid.each(["template", "message"], function (type) {
+                if (prefName === type) {
+                    fluid.set(auxSchema, [type + "Loader", "resources", "prefsEditor"], auxSchema[type]);
+                    delete auxSchema[type];
+                }
+            });
 
-            type = "templatePrefix";
-            if (prefName === type) {
-                fluid.prefs.expandSchemaDirectOption(auxSchema, type, "templatePrefix.templatePrefix");
-            }
-
-            type = "message";
-            if (prefName === type) {
-                fluid.set(auxSchema, ["messageLoader", "resources", "prefsEditor"], auxSchema[type]);
-                delete auxSchema[type];
-            }
-
-            type = "messagePrefix";
-            if (prefName === type) {
-                fluid.prefs.expandSchemaDirectOption(auxSchema, type, "messagePrefix.messagePrefix");
-            }
         });
 
         // Remove subPanels array. It is to keep track of the panels that are only used as sub-components of composite panels.
@@ -36021,10 +36030,7 @@ var fluid_2_0 = fluid_2_0 || {};
             initialModel: {
                 gradeNames: ["fluid.prefs.initialModel", "autoInit"]
             },
-            templatePrefix: {
-                gradeNames: ["fluid.littleComponent", "autoInit"]
-            },
-            messagePrefix: {
+            terms: {
                 gradeNames: ["fluid.littleComponent", "autoInit"]
             }
         },
@@ -36116,15 +36122,19 @@ var fluid_2_0 = fluid_2_0 || {};
      * contrast, table of contents, inputs larger and emphasize links
      *******************************************************************************/
 
+    fluid.defaults("fluid.prefs.termsAware");
+
     fluid.defaults("fluid.prefs.auxSchema.starter", {
         gradeNames: ["fluid.prefs.auxSchema", "autoInit"],
         auxiliarySchema: {
             "loaderGrades": ["fluid.prefs.separatedPanel"],
             "namespace": "fluid.prefs.constructed", // The author of the auxiliary schema will provide this and will be the component to call to initialize the constructed PrefsEditor.
-            "templatePrefix": "../../framework/preferences/html/",  // The common path to settings panel templates. The template defined in "panels" element will take precedence over this definition.
-            "template": "%prefix/SeparatedPanelPrefsEditor.html",
-            "messagePrefix": "../../framework/preferences/messages/",  // The common path to settings panel templates. The template defined in "panels" element will take precedence over this definition.
-            "message": "%prefix/prefsEditor.json",
+            "terms": {
+                "templatePrefix": "../../framework/preferences/html",  // Must match the keyword used below to identify the common path to settings panel templates.
+                "messagePrefix": "../../framework/preferences/messages"  // Must match the keyword used below to identify the common path to message files.
+            },
+            "template": "%templatePrefix/SeparatedPanelPrefsEditor.html",
+            "message": "%messagePrefix/prefsEditor.json",
             "textSize": {
                 "type": "fluid.prefs.textSize",
                 "enactor": {
@@ -36133,8 +36143,8 @@ var fluid_2_0 = fluid_2_0 || {};
                 "panel": {
                     "type": "fluid.prefs.panel.textSize",
                     "container": ".flc-prefsEditor-text-size",  // the css selector in the template where the panel is rendered
-                    "template": "%prefix/PrefsEditorTemplate-textSize.html",
-                    "message": "%prefix/textSize.json"
+                    "template": "%templatePrefix/PrefsEditorTemplate-textSize.html",
+                    "message": "%messagePrefix/textSize.json"
                 }
             },
             "lineSpace": {
@@ -36154,8 +36164,8 @@ var fluid_2_0 = fluid_2_0 || {};
                 "panel": {
                     "type": "fluid.prefs.panel.lineSpace",
                     "container": ".flc-prefsEditor-line-space",  // the css selector in the template where the panel is rendered
-                    "template": "%prefix/PrefsEditorTemplate-lineSpace.html",
-                    "message": "%prefix/lineSpace.json"
+                    "template": "%templatePrefix/PrefsEditorTemplate-lineSpace.html",
+                    "message": "%messagePrefix/lineSpace.json"
                 }
             },
             "textFont": {
@@ -36175,8 +36185,8 @@ var fluid_2_0 = fluid_2_0 || {};
                     "type": "fluid.prefs.panel.textFont",
                     "container": ".flc-prefsEditor-text-font",  // the css selector in the template where the panel is rendered
                     "classnameMap": {"textFont": "@textFont.classes"},
-                    "template": "%prefix/PrefsEditorTemplate-textFont.html",
-                    "message": "%prefix/textFont.json"
+                    "template": "%templatePrefix/PrefsEditorTemplate-textFont.html",
+                    "message": "%messagePrefix/textFont.json"
                 }
             },
             "contrast": {
@@ -36198,8 +36208,8 @@ var fluid_2_0 = fluid_2_0 || {};
                     "type": "fluid.prefs.panel.contrast",
                     "container": ".flc-prefsEditor-contrast",  // the css selector in the template where the panel is rendered
                     "classnameMap": {"theme": "@contrast.classes"},
-                    "template": "%prefix/PrefsEditorTemplate-contrast.html",
-                    "message": "%prefix/contrast.json"
+                    "template": "%templatePrefix/PrefsEditorTemplate-contrast.html",
+                    "message": "%messagePrefix/contrast.json"
                 }
             },
             "tableOfContents": {
@@ -36211,8 +36221,8 @@ var fluid_2_0 = fluid_2_0 || {};
                 "panel": {
                     "type": "fluid.prefs.panel.layoutControls",
                     "container": ".flc-prefsEditor-layout-controls",  // the css selector in the template where the panel is rendered
-                    "template": "%prefix/PrefsEditorTemplate-layout.html",
-                    "message": "%prefix/tableOfContents.json"
+                    "template": "%templatePrefix/PrefsEditorTemplate-layout.html",
+                    "message": "%messagePrefix/tableOfContents.json"
                 }
             },
             "emphasizeLinks": {
@@ -36224,8 +36234,8 @@ var fluid_2_0 = fluid_2_0 || {};
                 "panel": {
                     "type": "fluid.prefs.panel.emphasizeLinks",
                     "container": ".flc-prefsEditor-emphasizeLinks",  // the css selector in the template where the panel is rendered
-                    "template": "%prefix/PrefsEditorTemplate-emphasizeLinks.html",
-                    "message": "%prefix/emphasizeLinks.json"
+                    "template": "%templatePrefix/PrefsEditorTemplate-emphasizeLinks.html",
+                    "message": "%messagePrefix/emphasizeLinks.json"
                 }
             },
             "inputsLarger": {
@@ -36237,15 +36247,15 @@ var fluid_2_0 = fluid_2_0 || {};
                 "panel": {
                     "type": "fluid.prefs.panel.inputsLarger",
                     "container": ".flc-prefsEditor-inputsLarger",  // the css selector in the template where the panel is rendered
-                    "template": "%prefix/PrefsEditorTemplate-inputsLarger.html",
-                    "message": "%prefix/inputsLarger.json"
+                    "template": "%templatePrefix/PrefsEditorTemplate-inputsLarger.html",
+                    "message": "%messagePrefix/inputsLarger.json"
                 }
             },
             groups: {
                 "linksControls": {
                     "container": ".flc-prefsEditor-links-controls",
-                    "template": "%prefix/PrefsEditorTemplate-linksControls.html",
-                    "message": "%prefix/linksControls.json",
+                    "template": "%templatePrefix/PrefsEditorTemplate-linksControls.html",
+                    "message": "%messagePrefix/linksControls.json",
                     "type": "fluid.prefs.panel.linksControls",
                     "panels": ["emphasizeLinks", "inputsLarger"]
                 }
@@ -36366,10 +36376,12 @@ var fluid_2_0 = fluid_2_0 || {};
         gradeNames: ["fluid.prefs.auxSchema", "autoInit"],
         auxiliarySchema: {
             "namespace": "fluid.prefs.constructed",
-            "templatePrefix": "../../framework/preferences/html/",
-            "template": "%prefix/SeparatedPanelPrefsEditor.html",
-            "messagePrefix": "../../framework/preferences/messages/",
-            "message": "%prefix/prefsEditor.json",
+            "terms": {
+                "templatePrefix": "../../framework/preferences/html/",
+                "messagePrefix": "../../framework/preferences/messages/"
+            },
+            "template": "%templatePrefix/SeparatedPanelPrefsEditor.html",
+            "message": "%messagePrefix/prefsEditor.json",
 
             speak: {
                 type: "fluid.prefs.speak",
@@ -36380,8 +36392,8 @@ var fluid_2_0 = fluid_2_0 || {};
                 panel: {
                     type: "fluid.prefs.panel.speak",
                     container: ".flc-prefsEditor-speak",
-                    template: "%prefix/PrefsEditorTemplate-speak.html",
-                    message: "%prefix/speak.json"
+                    template: "%templatePrefix/PrefsEditorTemplate-speak.html",
+                    message: "%messagePrefix/speak.json"
                 }
             }
         }
@@ -36451,7 +36463,7 @@ var fluid_2_0 = fluid_2_0 || {};
         constructedGrades: {
             expander: {
                 func: "fluid.prefs.builder.constructGrades",
-                args: ["{that}.options.auxSchema", ["enactors", "messages", "panels", "initialModel", "templateLoader", "messageLoader", "templatePrefix", "messagePrefix"]]
+                args: ["{that}.options.auxSchema", ["enactors", "messages", "panels", "initialModel", "templateLoader", "messageLoader", "terms"]]
             }
         },
         mappedDefaults: "{primaryBuilder}.options.schema.properties",
@@ -36528,8 +36540,7 @@ var fluid_2_0 = fluid_2_0 || {};
                 priority: "last",
                 options: {
                     gradeNames: [
-                        "{fluid.prefs.assembler.prefsEd}.options.componentGrades.templatePrefix",
-                        "{fluid.prefs.assembler.prefsEd}.options.componentGrades.messagePrefix",
+                        "{fluid.prefs.assembler.prefsEd}.options.componentGrades.terms",
                         "{fluid.prefs.assembler.prefsEd}.options.componentGrades.messages",
                         "{fluid.prefs.assembler.prefsEd}.options.componentGrades.initialModel",
                         "{that}.options.loaderGrades"
@@ -36568,13 +36579,9 @@ var fluid_2_0 = fluid_2_0 || {};
             removeSource: true,
             target: "{that prefsEditor}.options"
         }, {
-            source: "{that}.options.templatePrefix",
+            source: "{that}.options.terms",
             removeSource: true,
-            target: "{that prefsEditorLoader}.options.templatePrefix"
-        }, {
-            source: "{that}.options.messagePrefix",
-            removeSource: true,
-            target: "{that prefsEditorLoader}.options.messagePrefix"
+            target: "{that prefsEditorLoader}.options.terms"
         }]
     });
 
@@ -36639,15 +36646,21 @@ var fluid_2_0 = fluid_2_0 || {};
 
     fluid.defaults("fluid.uiOptions.prefsEditor", {
         gradeNames: ["fluid.prefs.constructed.prefsEditor", "autoInit"],
-        distributeOptions: {
+        distributeOptions: [{
             source: "{that}.options.tocTemplate",
             target: "{that uiEnhancer}.options.tocTemplate"
-        },
+        }, {
+            source: "{that}.options.ignoreForToC",
+            target: "{that uiEnhancer}.options.ignoreForToC"
+        }],
         enhancer: {
-            distributeOptions: {
+            distributeOptions: [{
                 source: "{that}.options.tocTemplate",
                 target: "{that > fluid.prefs.enactor.tableOfContents}.options.tocTemplate"
-            }
+            }, {
+                source: "{that}.options.ignoreForToC",
+                target: "{that > fluid.prefs.enactor.tableOfContents}.options.ignoreForToC"
+            }]
         }
     });
 
