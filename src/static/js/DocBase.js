@@ -17,8 +17,10 @@ https://github.com/fluid-project/infusion/raw/master/Infusion-LICENSE.txt
         libPath = libPath || "";
 
         fluid.uiOptions.prefsEditor(".flc-prefsEditor-separatedPanel", {
-            templatePrefix: libPath + "lib/infusion/src/framework/preferences/html/",
-            messagePrefix: libPath + "lib/infusion/src/framework/preferences/messages/",
+            terms: {
+                templatePrefix: libPath + "lib/infusion/src/framework/preferences/html",
+                messagePrefix: libPath + "lib/infusion/src/framework/preferences/messages",
+            },
             tocTemplate: libPath + "lib/infusion/src/components/tableOfContents/html/TableOfContents.html"
         });
 
